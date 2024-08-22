@@ -53,6 +53,24 @@ pub const Vec3 = struct {
             .z = self.z / len,
         };
     }
+
+    pub fn zero() Vec3 {
+        return Vec3{ .x = 0, .y = 0, .z = 0 };
+    }
+
+    pub fn equals(self: Vec3, other: Vec3, epsilon: f32) bool {
+        return std.math.abs(self.x - other.x) < epsilon and
+            std.math.abs(self.y - other.y) < epsilon and
+            std.math.abs(self.z - other.z) < epsilon;
+    }
+
+    pub fn distance(self: Vec3, other: Vec3) f32 {
+        return self.subtract(other).length();
+    }
+
+    pub fn lerp(self: Vec3, other: Vec3, t: f32) Vec3 {
+        return self.add(other.subtract(self).multiply(t));
+    }
 };
 
 pub const Mat4 = struct {
@@ -88,5 +106,32 @@ pub const Mat4 = struct {
             .y = self.data[1][0] * vec.x + self.data[1][1] * vec.y + self.data[1][2] * vec.z + self.data[1][3],
             .z = self.data[2][0] * vec.x + self.data[2][1] * vec.y + self.data[2][2] * vec.z + self.data[2][3],
         };
+    }
+
+    pub fn translation(x: f32, y: f32, z: f32) Mat4 {
+        var result = identity();
+        result.data[0][3] = x;
+        result.data[1][3] = y;
+        result.data[2][3] = z;
+        return result;
+    }
+
+    pub fn rotationX(angle: f32) Mat4 {
+        var result = identity();
+        const c = @cos(angle);
+        const s = @sin(angle);
+        result.data[1][1] = c;
+        result.data[1][2] = -s;
+        result.data[2][1] = s;
+        result.data[2][2] = c;
+        return result;
+    }
+
+    pub fn scaling(x: f32, y: f32, z: f32) Mat4 {
+        var result = identity();
+        result.data[0][0] = x;
+        result.data[1][1] = y;
+        result.data[2][2] = z;
+        return result;
     }
 };
