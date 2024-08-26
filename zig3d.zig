@@ -1,55 +1,67 @@
 const std = @import("std");
-const Math = @import("math.zig");
-const Renderer = @import("render.zig").Renderer;
+const c = @cImport({
+    @cInclude("SDL.h");
+});
 
-pub const Zig3D = struct {
-    is_running: bool,
-    renderer: Renderer,
-    last_time: i64,
+pub const Renderer = struct {
+    pub fn init(width: i32, height: i32) !Renderer {
+        if (c.SDL_Init(c.SDL_INIT_VIDEO) != 0) {
+            return error.SDLInitFailed;
+        }
+        defer c.SDL_Quit();
 
-    pub fn init() !Zig3D {
-        return Zig3D{
-            .is_running = true,
-            .renderer = try Renderer.init(800, 600),
-            .last_time = std.time.milliTimestamp(),
+        const window = c.SDL_CreateWindow("Zig 3D", c.SDL_WINDOWPOS_CENTERED, c.SDL_WINDOWPOS_CENTERED, width, height, c.SDL_WINDOW_SHOWN) orelse {
+            return error.SDLWindowCreationFailed;
+        };
+        defer c.SDL_DestroyWindow(window);
+
+        const renderer = c.SDL_CreateRenderer(window, -1, c.SDL_RENDERER_ACCELERATED) orelse {
+            return error.SDLRendererCreationFailed;
+        };
+        defer c.SDL_DestroyRenderer(renderer);
+
+        return Renderer{
+            .window = window,
+            .renderer = renderer,
         };
     }
 
-    pub fn run(self: *Zig3D) !void {
-        while (self.is_running) {
-            try self.processInput();
-            try self.update();
-            try self.render();
-
-            if (std.time.milliTimestamp() - self.last_time < 16) {
-                std.time.sleep(16 * std.time.ns_per_ms);
-            }
-            self.last_time = std.time.milliTimestamp();
-        }
+    pub fn deinit(self: *Renderer) void {
+        c.SDL_DestroyRenderer(self.renderer);
+        c.SDL_DestroyWindow(self.window);
+        c.SDL_Quit();
     }
 
-    fn processInput(self: *Zig3D) !void {
-
-        // self.is_running = !quit_requested;
-
-        @unused self;
+    pub fn clear(self: *Renderer, color: u8) void {
+        c.SDL_SetRenderDrawColor(self.renderer, color, color, color, 255);
+        c.SDL_RenderClear(self.renderer);
     }
 
-    fn update(self: *Zig3D) !void {
-        // Update game state, physics, etc.
-        @unused self;
+    pub fn present(self: *Renderer) void {
+        c.SDL_RenderPresent(self.renderer);
     }
 
-    fn render(self: *Zig3D) !void {
-        self.renderer.clear(0x000000); 
+    window: *c.SDL_Window,
+    renderer: *c.SDL_Renderer,
+};
 
-        // Example: render a point
-        const point = Math.Vec3{ .x = 400, .y = 300, .z = 0 };
-        self.renderer.renderPoint(point, 0xFFFFFF);
-        self.renderer.present();
+pub const Zig3D = struct {
+    renderer: Renderer,
+
+    pub fn init() !Zig3D {
+        return Zig3D{
+            .renderer = try Renderer.init(800, 600),
+        };
     }
 
-    pub fn cleanup(self: *Zig3D) void {
+    pub fn deinit(self: *Zig3D) void {
         self.renderer.deinit();
+    }
+
+    pub fn run(self: *Zig3D) !void {
+        self.renderer.clear(255);
+        self.renderer.present();
+
+        c.SDL_Delay(3000);
     }
 };

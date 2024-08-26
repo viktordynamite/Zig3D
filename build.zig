@@ -1,36 +1,39 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
+pub fn buildApp(b: *std.build.Builder) void {
+    const builder = std.build(b);
+    const target = builder.standardTargetOptions(.{});
 
-    const exe = b.addExecutable("zig3d", "src/main.zig");
+    const exe_options = std.build.ExecutableOptions{
+        .name = "zig3d",
+    };
+    const exe = builder.addExecutable(exe_options);
     exe.setTarget(target);
 
-    exe.setBuildMode(b.standardReleaseOptions());
+    exe.setBuildMode(builder.standardReleaseOptions());
 
+    exe.addSourceFile("src/main.zig");
     exe.addSourceFile("src/math.zig");
     exe.addSourceFile("src/render.zig");
     exe.addSourceFile("src/zig3d.zig");
 
-    // Add any dependencies
-    // exe.addPackagePath("some_package", "path/to/package.zig");
-
     // Link system libraries
-    // exe.linkSystemLibrary("c");
-    // exe.linkSystemLibrary("opengl32"); // for Windows
-    // exe.linkSystemLibrary("GL"); // for Linux
+    exe.linkSystemLibrary("glfw3"); // for Windows
+    exe.linkSystemLibrary("GL"); // for Linux
+    exe.linkSystemLibrary("GLU"); // for Linux
+    exe.linkSystemLibrary("GLUT"); // for Linux
 
     exe.install();
 
     const run_cmd = exe.run();
-    run_cmd.step.dependOn(b.getInstallStep());
+    run_cmd.step.dependOn(builder.getInstallStep());
 
-    const run_step = b.step("run", "Run the app");
+    const run_step = builder.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const test_step = b.step("test", "Run unit tests");
-    const exe_tests = b.addTest("src/main.zig");
+    const test_step = builder.step("test", "Run unit tests");
+    const exe_tests = builder.addTest("src/main.zig");
     exe_tests.setTarget(target);
-    exe_tests.setBuildMode(b.standardReleaseOptions());
+    exe_tests.setBuildMode(builder.standardReleaseOptions());
     test_step.dependOn(&exe_tests.step);
 }
